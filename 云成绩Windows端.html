@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云成绩系统</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #e6f0ff, #4a7bff, #1a2a6c);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        /* 服务器连接提示 */
+        #server-connection {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #e6f0ff, #4a7bff, #1a2a6c);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease;
+        }
+        
+        .connection-logo {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        .connection-logo i {
+            font-size: 60px;
+            color: white;
+        }
+        
+        .connection-text {
+            color: white;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .connection-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-top: 5px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .app-container {
+            width: 100%;
+            max-width: 500px;
+            height: 90vh;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 25px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            position: relative;
+            display: none;
+        }
+        
+        /* 页面通用样式 */
+        .page {
+            width: 100%;
+            height: 100%;
+            padding: 30px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            transform: translateY(20px);
+            overflow-y: auto;
+        }
+        
+        .page.active {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateY(0);
+        }
+        
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .page-header h1 {
+            color: #1a2a6c;
+            font-size: 28px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        
+        .page-header p {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 25px;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #1a2a6c, #4a7bff);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 40px;
+            box-shadow: 0 5px 15px rgba(26, 42, 108, 0.3);
+        }
+        
+        /* 表单样式 */
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .forgot-password {
+            display: block;
+            text-align: right;
+            margin-top: 8px;
+            color: #4a7bff;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        .forgot-password:hover {
+            color: #1a2a6c;
+            text-decoration: underline;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 16px;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background-color: #f9f9f9;
+        }
+        
+        .form-control:focus {
+            border-color: #4a7bff;
+            background-color: white;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(74, 123, 255, 0.2);
+        }
+        
+        .btn {
+            background: linear-gradient(to right, #1a2a6c, #4a7bff);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(26, 42, 108, 0.3);
+            margin-top: 10px;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(26, 42, 108, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        /* 科目列表样式 */
+        .subject-list {
+            margin-bottom: 20px;
+        }
+        
+        .subject-item {
+            display: flex;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+        
+        .subject-item .form-control {
+            flex: 1;
+        }
+        
+        .delete-subject {
+            width: 50px;
+            height: 50px;
+            background: #f8f9ff;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            color: #ff4b2b;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .delete-subject:hover {
+            background: #ffebee;
+            border-color: #ffcdd2;
+        }
+        
+        .add-subject {
+            background: #f8f9ff;
+            color: #4a7bff;
+            border: 2px dashed #bbdefb;
+            margin-top: 10px;
+        }
+        
+        .add-subject:hover {
+            background: #e3f2fd;
+            box-shadow: 0 5px 15px rgba(74, 123, 255, 0.2);
+        }
+        
+        /* 人机验证样式 */
+        .captcha-container {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .captcha-text {
+            font-size: 24px;
+            letter-spacing: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+            color: #333;
+            user-select: none;
+        }
+        
+        .captcha-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .refresh-captcha {
+            background: none;
+            border: none;
+            color: #4a7bff;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        /* 主页样式 */
+        .vip-status {
+            background: linear-gradient(135deg, #1a2a6c, #4a7bff);
+            color: white;
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(26, 42, 108, 0.3);
+            text-align: center;
+        }
+        
+        .vip-status h2 {
+            font-size: 22px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .vip-status h2 i {
+            margin-right: 10px;
+            color: gold;
+        }
+        
+        .vip-features {
+            background-color: #f8f9ff;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .vip-features h3 {
+            color: #1a2a6c;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .feature-list {
+            list-style-type: none;
+        }
+        
+        .feature-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+        }
+        
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .feature-list li i {
+            margin-right: 10px;
+            color: #4a7bff;
+        }
+        
+        .feature-disabled {
+            color: #999;
+        }
+        
+        .feature-disabled i {
+            color: #ccc !important;
+        }
+        
+        .query-btn {
+            background: linear-gradient(to right, #4a7bff, #8ab4f8);
+            margin-top: 20px;
+        }
+        
+        /* 成绩表格样式 */
+        .student-info {
+            background: linear-gradient(135deg, #1a2a6c, #4a7bff);
+            color: white;
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(26, 42, 108, 0.3);
+        }
+        
+        .student-info h2 {
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+        
+        .grades-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        
+        .grades-table th {
+            background-color: #1a2a6c;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+        
+        .grades-table tr:nth-child(even) {
+            background-color: #f8f9ff;
+        }
+        
+        .grades-table tr:hover {
+            background-color: #eef2ff;
+        }
+        
+        .grades-table td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: #e6f0ff;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+        }
+        
+        .back-btn:hover {
+            background: #cce0ff;
+            transform: translateX(-3px);
+        }
+        
+        /* 消息提示 */
+        .message {
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        .success-message {
+            background: linear-gradient(135deg, #00b09b, #96c93d);
+        }
+        
+        .error-message {
+            background: linear-gradient(135deg, #ff5252, #d32f2f);
+        }
+        
+        .message i {
+            margin-right: 10px;
+            font-size: 20px;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(-30px); }
+            70% { transform: translateX(-50%) translateY(5px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 服务器连接提示 -->
+    <div id="server-connection">
+        <div class="connection-logo">
+            <i class="fas fa-server"></i>
+        </div>
+        <div class="connection-text">正在连接服务器，请稍后...</div>
+        <div class="connection-spinner"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- 成绩修改页面 -->
+        <div id="editScore" class="page active">
+            <div class="page-header">
+                <h1>成绩修改</h1>
+                <p>请填写考试信息和成绩</p>
+            </div>
+            <div class="logo-container">
+                <div class="logo"><i class="fas fa-graduation-cap"></i></div>
+            </div>
+
+            <div class="form-group">
+                <label for="studentName">姓名</label>
+                <input type="text" id="studentName" class="form-control" placeholder="请输入姓名">
+            </div>
+
+            <div class="form-group">
+                <label for="studentId">考号</label>
+                <input type="text" id="studentId" class="form-control" placeholder="请输入考号">
+            </div>
+
+            <div class="form-group">
+                <label for="examName">考试名称</label>
+                <input type="text" id="examName" class="form-control" placeholder="请输入考试名称">
+            </div>
+
+            <div class="form-group">
+                <label for="examDate">考试时间</label>
+                <input type="date" id="examDate" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label>考试科目及成绩</label>
+                <div id="subjectList" class="subject-list">
+                    <div class="subject-item">
+                        <input type="text" class="form-control subject-input" placeholder="科目名称">
+                        <input type="number" step="0.1" class="form-control grade-input" placeholder="分数（小数）">
+                        <button class="delete-subject" disabled><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <button id="addSubject" class="btn add-subject"><i class="fas fa-plus"></i> 添加科目</button>
+            </div>
+
+            <!-- 排名输入 -->
+        <div class="form-group">
+            <label for="classRankInput">班级排名（不填默认不显示）</label>
+            <input type="number" id="classRankInput" class="form-control" placeholder="请输入班级排名" min="1">
+        </div>
+
+        <div class="form-group">
+            <label for="schoolRankInput">校序排名（不填默认不显示）</label>
+            <input type="number" id="schoolRankInput" class="form-control" placeholder="请输入校序排名" min="1">
+        </div>
+
+        <button id="saveScore" class="btn">保存成绩</button>
+    </div>
+
+        <!-- 登录页面 -->
+        <div id="login" class="page">
+            <div class="back-btn" id="backToEdit"><i class="fas fa-arrow-left"></i></div>
+            <div class="page-header">
+                <h1>用户登录</h1>
+                <p>请输入用户名和密码</p>
+            </div>
+            <div class="logo-container">
+                <div class="logo"><i class="fas fa-user-graduate"></i></div>
+            </div>
+
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" class="form-control" placeholder="请输入用户名">
+            </div>
+
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" class="form-control" placeholder="请输入密码">
+                <a href="#" id="forgotPassword" class="forgot-password">忘记密码?</a>
+            </div>
+
+            <div class="captcha-container">
+                <p>请输入下方验证码</p>
+                <div id="captchaText" class="captcha-text">ABCD</div>
+                <input type="text" id="captchaInput" class="captcha-input" placeholder="请输入验证码">
+                <button id="refreshCaptcha" class="refresh-captcha"><i class="fas fa-sync-alt"></i> 刷新验证码</button>
+            </div>
+
+            <button id="loginBtn" class="btn">登录</button>
+        </div>
+
+        <!-- 主页 -->
+        <div id="home" class="page">
+            <div class="page-header">
+                <h1>云成绩系统</h1>
+                <p>欢迎使用成绩管理平台</p>
+            </div>
+
+            <div class="vip-status">
+                <h2><i class="fas fa-crown"></i> 会员中心</h2>
+                <p> 未开通</p>
+                <p>升级会员可享受更多特权</p>
+            </div>
+
+            <div class="vip-features">
+                <h3>会员特权</h3>
+                <ul class="feature-list">
+                    <li class="feature-disabled"><i class="fas fa-times-circle"></i> 成绩分析报告</li>
+                    <li class="feature-disabled"><i class="fas fa-times-circle"></i> 排名查询</li>
+                    <li class="feature-disabled"><i class="fas fa-times-circle"></i> 错题集</li>
+                    <li class="feature-disabled"><i class="fas fa-times-circle"></i> 学习计划</li>
+                </ul>
+            </div>
+
+            <button id="queryTranscript" class="btn query-btn"><i class="fas fa-search"></i> 查询成绩单</button>
+        </div>
+
+        <!-- 成绩单页面 -->
+        <div id="transcript" class="page">
+            <div class="back-btn" id="backToHome"><i class="fas fa-arrow-left"></i></div>
+            <div class="page-header">
+                <h1>个人成绩单</h1>
+            </div>
+
+            <div class="student-info">
+                <h2 id="transcriptStudentName">张三</h2>
+                <p>考号: <span id="transcriptStudentId">20230001</span></p>
+                <p>考试名称: <span id="transcriptExamName">期中考试</span></p>
+                <p>考试时间: <span id="transcriptExamDate">2023-11-15</span></p>
+            </div>
+
+            <table class="grades-table">
+                <thead>
+                    <tr>
+                        <th>科目</th>
+                        <th>分数</th>
+                    </tr>
+                </thead>
+                <tbody id="transcriptGrades">
+                    <tr>
+                        <td>语文</td>
+                        <td>85.5</td>
+                    </tr>
+                    <tr>
+                        <td>数学</td>
+                        <td>92.0</td>
+                    </tr>
+                    <tr>
+                        <td>英语</td>
+                        <td>78.5</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 页面定义
+        const pages = {
+            editScore: document.getElementById('editScore'),
+            login: document.getElementById('login'),
+            home: document.getElementById('home'),
+            transcript: document.getElementById('transcript')
+        };
+
+        // 显示指定页面
+        function showPage(page) {
+            // 隐藏所有页面
+            Object.values(pages).forEach(p => {
+                p.classList.remove('active');
+            });
+            // 显示目标页面
+            page.classList.add('active');
+        }
+
+        // 页面加载完成后，隐藏服务器连接提示并显示主内容区域
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                document.getElementById('server-connection').style.display = 'none';
+                // 创建"正在打开网址"提示，样式与服务器连接提示一致
+                const openingPrompt = document.createElement('div');
+                openingPrompt.id = 'opening-prompt';
+                // 直接应用样式而不是复制内联样式
+                openingPrompt.style.position = 'fixed';
+                openingPrompt.style.top = '0';
+                openingPrompt.style.left = '0';
+                openingPrompt.style.width = '100%';
+                openingPrompt.style.height = '100%';
+                openingPrompt.style.background = 'linear-gradient(135deg, #e6f0ff, #4a7bff, #1a2a6c)';
+                openingPrompt.style.display = 'flex';
+                openingPrompt.style.flexDirection = 'column';
+                openingPrompt.style.justifyContent = 'center';
+                openingPrompt.style.alignItems = 'center';
+                openingPrompt.style.zIndex = '10000';
+                openingPrompt.style.transition = 'opacity 0.5s ease';
+                openingPrompt.innerHTML = `
+                    <div class="connection-logo">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <div class="connection-text">正在打开网址，请稍后...</div>
+                    <div class="connection-spinner"></div>
+                `;
+                document.body.appendChild(openingPrompt);
+
+                // 延迟0.5秒后隐藏提示并显示主内容区域，给用户足够时间看到
+                setTimeout(function() {
+                    openingPrompt.style.opacity = '0';
+                    setTimeout(function() {
+                        document.body.removeChild(openingPrompt);
+                        document.querySelector('.app-container').style.display = 'block';
+                    }, 500);
+                }, 500);
+            }, 1500); // 延迟1.5秒，模拟服务器连接过程
+
+            // 初始化日期为今天
+            document.getElementById('examDate').valueAsDate = new Date();
+        });
+
+        // 添加科目按钮事件
+        document.getElementById('addSubject').addEventListener('click', function() {
+            const subjectList = document.getElementById('subjectList');
+            const subjectItem = document.createElement('div');
+            subjectItem.className = 'subject-item';
+            subjectItem.innerHTML = `
+                <input type="text" class="form-control subject-input" placeholder="科目名称">
+                <input type="number" step="0.1" class="form-control grade-input" placeholder="分数（小数）">
+                <button class="delete-subject"><i class="fas fa-times"></i></button>
+            `;
+            subjectList.appendChild(subjectItem);
+
+            // 为新添加的删除按钮绑定事件
+            const deleteBtn = subjectItem.querySelector('.delete-subject');
+            deleteBtn.addEventListener('click', function() {
+                subjectItem.remove();
+                // 更新删除按钮状态
+                updateDeleteButtons();
+            });
+
+            // 更新删除按钮状态
+            updateDeleteButtons();
+        });
+
+        // 更新删除按钮状态
+        function updateDeleteButtons() {
+            const subjectItems = document.querySelectorAll('.subject-item');
+            subjectItems.forEach((item, index) => {
+                const deleteBtn = item.querySelector('.delete-subject');
+                if (subjectItems.length <= 1) {
+                    deleteBtn.disabled = true;
+                    deleteBtn.style.opacity = '0.5';
+                } else {
+                    deleteBtn.disabled = false;
+                    deleteBtn.style.opacity = '1';
+                }
+            });
+        }
+
+        // 保存成绩按钮事件
+        document.getElementById('saveScore').addEventListener('click', function() {
+            // 收集表单数据
+            const studentName = document.getElementById('studentName').value;
+            const studentId = document.getElementById('studentId').value;
+            const examName = document.getElementById('examName').value;
+            const examDate = document.getElementById('examDate').value;
+
+            // 简单验证
+            if (!studentName || !studentId || !examName || !examDate) {
+                showMessage('请填写所有必填字段', 'error');
+                return;
+            }
+
+            // 保存到本地存储
+            localStorage.setItem('studentName', studentName);
+            localStorage.setItem('studentId', studentId);
+            localStorage.setItem('examName', examName);
+            localStorage.setItem('examDate', examDate);
+            // 保存排名信息
+            const classRank = document.getElementById('classRankInput').value;
+            const schoolRank = document.getElementById('schoolRankInput').value;
+            localStorage.setItem('classRank', classRank);
+            localStorage.setItem('schoolRank', schoolRank);
+
+            // 收集科目和成绩
+            const subjects = [];
+            const subjectInputs = document.querySelectorAll('.subject-input');
+            const gradeInputs = document.querySelectorAll('.grade-input');
+
+            subjectInputs.forEach((subjectInput, index) => {
+                const subject = subjectInput.value;
+                const grade = gradeInputs[index].value;
+
+                if (subject && grade) {
+                    subjects.push({
+                        subject: subject,
+                        grade: parseFloat(grade)
+                    });
+                }
+            });
+
+            if (subjects.length === 0) {
+                showMessage('请添加至少一个科目和成绩', 'error');
+                return;
+            }
+
+            localStorage.setItem('subjects', JSON.stringify(subjects));
+
+            // 显示成功消息并跳转到登录页面
+            showMessage('成绩保存成功，请登录', 'success');
+            setTimeout(() => {
+                showPage(pages.login);
+            }, 1500);
+        });
+
+        // 默认隐藏登录页面的返回按钮
+        document.getElementById('backToEdit').style.display = 'none';
+
+        // 返回按钮事件
+        document.getElementById('backToEdit').addEventListener('click', function() {
+            showPage(pages.editScore);
+            // 返回后再次隐藏返回按钮
+            setTimeout(() => {
+                document.getElementById('backToEdit').style.display = 'none';
+            }, 500);
+        });
+
+        document.getElementById('backToHome').addEventListener('click', function() {
+            showPage(pages.home);
+        });
+
+        // 生成随机验证码
+        function generateCaptcha() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let captcha = '';
+            for (let i = 0; i < 4; i++) {
+                captcha += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return captcha;
+        }
+
+        // 刷新验证码
+        document.getElementById('refreshCaptcha').addEventListener('click', function() {
+            const captchaText = document.getElementById('captchaText');
+            captchaText.textContent = generateCaptcha();
+        });
+
+        // 登录按钮事件
+        document.getElementById('loginBtn').addEventListener('click', function() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const captchaInput = document.getElementById('captchaInput').value;
+            const captchaText = document.getElementById('captchaText').textContent;
+
+            // 简单验证
+            if (!username || !password) {
+                showMessage('请输入用户名和密码', 'error');
+                return;
+            }
+
+            if (captchaInput.toUpperCase() !== captchaText) {
+                showMessage('验证码错误', 'error');
+                return;
+            }
+
+            // 显示成功消息并跳转到主页
+            showMessage('登录成功！', 'success');
+            setTimeout(() => {
+                showPage(pages.home);
+            }, 1500);
+        });
+
+        // 查询成绩单按钮事件
+        document.getElementById('queryTranscript').addEventListener('click', function() {
+            // 从本地存储获取数据
+            const studentName = localStorage.getItem('studentName');
+            const studentId = localStorage.getItem('studentId');
+            const examName = localStorage.getItem('examName');
+            const examDate = localStorage.getItem('examDate');
+            const subjects = JSON.parse(localStorage.getItem('subjects') || '[]');
+
+            // 更新成绩单页面
+            document.getElementById('transcriptStudentName').textContent = studentName || '未设置';
+            document.getElementById('transcriptStudentId').textContent = studentId || '未设置';
+            document.getElementById('transcriptExamName').textContent = examName || '未设置';
+            document.getElementById('transcriptExamDate').textContent = examDate || '未设置';
+
+            // 获取排名信息
+            const classRank = localStorage.getItem('classRank') || '';
+            const schoolRank = localStorage.getItem('schoolRank') || '';
+
+            // 更新表格头部
+            const tableHead = document.querySelector('.grades-table thead tr');
+            // 移除现有的排名列（如果存在）
+            while (tableHead.children.length > 2) {
+                tableHead.removeChild(tableHead.lastChild);
+            }
+            // 添加排名列（如果有排名数据）
+            if (classRank) {
+                const classRankTh = document.createElement('th');
+                classRankTh.textContent = '班级排名';
+                tableHead.appendChild(classRankTh);
+            }
+            if (schoolRank) {
+                const schoolRankTh = document.createElement('th');
+                schoolRankTh.textContent = '校序排名';
+                tableHead.appendChild(schoolRankTh);
+            }
+
+            // 更新成绩表格
+            const transcriptGrades = document.getElementById('transcriptGrades');
+            transcriptGrades.innerHTML = '';
+
+            if (subjects.length === 0) {
+                transcriptGrades.innerHTML = `
+                    <tr>
+                        <td colspan="2" style="text-align: center;">暂无成绩数据</td>
+                    </tr>
+                `;
+            } else {
+                subjects.forEach(subject => {
+                    const tr = document.createElement('tr');
+                    let rowContent = `
+                        <td>${subject.subject}</td>
+                        <td>${subject.grade.toFixed(1)}</td>
+                    `;
+                    // 添加排名数据
+                    if (classRank) {
+                        rowContent += `<td>${classRank}</td>`;
+                    }
+                    if (schoolRank) {
+                        rowContent += `<td>${schoolRank}</td>`;
+                    }
+                    tr.innerHTML = rowContent;
+                    transcriptGrades.appendChild(tr);
+                });
+            }
+
+            // 显示成绩单页面
+            showPage(pages.transcript);
+        });
+
+        // 显示消息函数
+        function showMessage(message, type = 'success') {
+            const msgEl = document.createElement('div');
+            msgEl.className = `message ${type}-message`;
+
+            // 添加图标
+            const icon = document.createElement('i');
+            if (type === 'success') {
+                icon.className = 'fas fa-check-circle';
+            } else {
+                icon.className = 'fas fa-exclamation-circle';
+            }
+            msgEl.appendChild(icon);
+
+            // 添加文本
+            const textNode = document.createTextNode(message);
+            msgEl.appendChild(textNode);
+
+            document.body.appendChild(msgEl);
+
+            setTimeout(() => {
+                msgEl.style.opacity = '0';
+                msgEl.style.transform = 'translateX(-50%) translateY(-30px)';
+                msgEl.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                setTimeout(() => {
+                    document.body.removeChild(msgEl);
+                }, 500);
+            }, 2500);
+        }
+
+        // 显示确认对话框
+        function showConfirmDialog(message, onConfirm) {
+            // 创建遮罩层
+            const overlay = document.createElement('div');
+            overlay.className = 'confirm-overlay';
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.background = 'rgba(0, 0, 0, 0.5)';
+            overlay.style.display = 'flex';
+            overlay.style.justifyContent = 'center';
+            overlay.style.alignItems = 'center';
+            overlay.style.zIndex = '10000';
+            overlay.style.animation = 'fadeIn 0.3s';
+
+            // 创建对话框
+            const dialog = document.createElement('div');
+            dialog.className = 'confirm-dialog';
+            dialog.style.background = 'white';
+            dialog.style.borderRadius = '15px';
+            dialog.style.padding = '25px';
+            dialog.style.width = '90%';
+            dialog.style.maxWidth = '400px';
+            dialog.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.2)';
+            dialog.style.animation = 'slideUp 0.3s';
+
+            // 对话框内容
+            const dialogContent = document.createElement('div');
+            dialogContent.style.marginBottom = '20px';
+            dialogContent.style.fontSize = '16px';
+            dialogContent.style.color = '#333';
+            dialogContent.style.textAlign = 'center';
+            dialogContent.textContent = message;
+
+            // 按钮容器
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.display = 'flex';
+            buttonContainer.style.justifyContent = 'center';
+            buttonContainer.style.gap = '15px';
+
+            // 取消按钮
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'btn cancel-btn';
+            cancelBtn.style.width = '120px';
+            cancelBtn.style.background = '#f1f1f1';
+            cancelBtn.style.color = '#333';
+            cancelBtn.style.boxShadow = 'none';
+            cancelBtn.textContent = '取消';
+            cancelBtn.addEventListener('click', () => {
+                document.body.removeChild(overlay);
+            });
+
+            // 确认按钮
+            const confirmBtn = document.createElement('button');
+            confirmBtn.className = 'btn confirm-btn';
+            confirmBtn.style.width = '120px';
+            confirmBtn.style.background = 'linear-gradient(to right, #1a2a6c, #4a7bff)';
+            confirmBtn.textContent = '是';
+            confirmBtn.addEventListener('click', () => {
+                document.body.removeChild(overlay);
+                if (onConfirm) onConfirm();
+            });
+
+            // 组装对话框
+            buttonContainer.appendChild(cancelBtn);
+            buttonContainer.appendChild(confirmBtn);
+            dialog.appendChild(dialogContent);
+            dialog.appendChild(buttonContainer);
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+
+            // 添加动画样式
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                @keyframes slideUp {
+                    from { transform: translateY(30px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // 忘记密码链接事件
+        document.getElementById('forgotPassword').addEventListener('click', function(e) {
+            e.preventDefault();
+            showConfirmDialog('是否进行忘记密码操作？', function() {
+                // 显示"正在打开网址"提示
+                showMessage('正在打开网址', 'success');
+                setTimeout(() => {
+                    // 显示登录页面的返回按钮
+                    document.getElementById('backToEdit').style.display = 'flex';
+                    // 切换到成绩修改页面
+                    showPage(pages.editScore);
+                }, 200); // 持续0.2秒
+            });
+        });
+
+        // 初始化验证码
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('captchaText').textContent = generateCaptcha();
+        });
+    </script>
+</body>
+</html>
