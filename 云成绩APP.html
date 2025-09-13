@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云成绩APP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1E40AF',
+                        secondary: '#0284C7',
+                        success: '#10B981',
+                        warning: '#F59E0B',
+                        danger: '#EF4444',
+                        info: '#3B82F6',
+                        light: '#F3F4F6',
+                        dark: '#1F2937'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .bg-gradient-blue {
+                background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .transition-all-300 {
+                transition: all 0.3s ease;
+            }
+            .shadow-custom {
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            }
+            .float-animation {
+                animation: float 6s ease-in-out infinite;
+            }
+            @keyframes float {
+                0% { transform: translateY(0px); }
+                50% { transform: translateY(-10px); }
+                100% { transform: translateY(0px); }
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-white font-sans">
+    <!-- 服务器连接提示 -->
+    <div id="serverConnection" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="text-primary text-5xl mb-4 animate-pulse">
+            <i class="fa fa-server" aria-hidden="true"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-dark mb-2">正在连接服务器</h2>
+        <p class="text-gray-500 mb-6">请稍候...</p>
+        <div class="w-64 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+            <div id="connectionProgress" class="h-full bg-primary rounded-full w-0 transition-all duration-1000"></div>
+        </div>
+        <p id="connectionStatus" class="mt-4 text-gray-500 text-sm">正在建立连接...</p>
+    </div>
+
+    <!-- 服务器异常提示 -->
+    <div id="serverError" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center hidden">
+        <div class="text-danger text-5xl mb-4">
+            <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-dark mb-2">服务器异常</h2>
+        <p class="text-gray-500 mb-6">无法连接到服务器，请稍后再试</p>
+        <button id="retryConnection" class="px-6 py-3 bg-primary text-white rounded-lg shadow-md hover:bg-primary/90 transition-all-300">
+            重试连接
+        </button>
+    </div>
+
+    <!-- 登录页面 -->
+    <div id="loginPage" class="flex h-screen overflow-hidden hidden">
+        <!-- 左侧会员权益浮屏 -->
+        <div class="w-1/2 bg-gradient-blue p-10 flex flex-col justify-center">
+            <div class="float-animation">
+                <h1 class="text-[clamp(2rem,5vw,3.5rem)] font-bold text-primary mb-6 text-shadow">云成绩<br/>学习管家</h1>
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold text-dark mb-4">开通会员即可享受权益</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center">
+                            <i class="fa fa-check-circle text-success mr-3"></i>
+                            <p>实时成绩分析与趋势图</p>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="fa fa-check-circle text-success mr-3"></i>
+                            <p>学科薄弱点智能诊断</p>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="fa fa-check-circle text-success mr-3"></i>
+                            <p>个性化学习计划制定</p>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="fa fa-check-circle text-success mr-3"></i>
+                            <p>错题本智能整理与复习</p>
+                        </div>
+                    </div>
+                </div>
+                <button id="openVipBtn" class="w-full py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-all-300">
+                    开通会员
+                </button>
+            </div>
+        </div>
+
+        <!-- 右侧登录表单 -->
+        <div class="w-1/2 flex items-center justify-center p-10">
+            <div class="w-full max-w-md">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-dark">学生登录</h2>
+                    <p class="text-gray-500 mt-2">请输入您的账号密码登录</p>
+                </div>
+                
+                <form id="loginForm" class="space-y-4">
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-700 mb-1">用户名</label>
+                        <input type="text" id="username" name="username" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all-300" 
+                            placeholder="请输入用户名" required>
+                    </div>
+                    
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                        <input type="password" id="password" name="password" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all-300" 
+                            placeholder="请输入密码" required>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                        <button type="button" id="forgotPasswordBtn" class="text-sm text-primary hover:text-primary/80 transition-all-300">
+                            忘记密码？
+                        </button>
+                        <button type="button" id="registerBtn" class="text-sm text-primary hover:text-primary/80 transition-all-300">
+                            立即注册
+                        </button>
+                    </div>
+                    
+                    <button type="submit" class="w-full py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-all-300 shadow-md">
+                        登录
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 学生主页 -->
+    <div id="studentHomePage" class="min-h-screen bg-white hidden">
+        <!-- 顶部信息 -->
+        <div class="bg-primary text-white p-6">
+            <div class="max-w-5xl mx-auto">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold">云成绩学习管家</h1>
+                    <button id="logoutBtn" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all-300">
+                        <i class="fa fa-sign-out mr-1" aria-hidden="true"></i> 退出登录
+                    </button>
+                </div>
+                <div id="userInfo" class="mt-4">
+                    <p class="text-lg"><i class="fa fa-user mr-2" aria-hidden="true"></i> <span id="studentName">--</span></p>
+                    <p class="text-sm opacity-80 mt-1"><i class="fa fa-id-card mr-2" aria-hidden="true"></i> 学号：<span id="studentId">--</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="max-w-5xl mx-auto p-6">
+            <!-- 会员功能卡片 -->
+            <div class="bg-gradient-blue rounded-xl p-6 mb-8 shadow-custom">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-dark">会员功能</h2>
+                    <span class="px-3 py-1 bg-warning/20 text-warning text-sm rounded-full">暂不可用</span>
+                </div>
+                <p class="text-gray-600">开通会员即可享受成绩分析、学习计划等高级功能</p>
+            </div>
+
+            <!-- 查询按钮 -->
+            <div class="text-center mb-8">
+                <button id="queryScoresBtn" class="px-8 py-3 bg-primary text-white rounded-lg shadow-md hover:bg-primary/90 transition-all-300 font-medium text-lg">
+                    <i class="fa fa-search mr-2" aria-hidden="true"></i> 查询成绩
+                </button>
+            </div>
+
+            <!-- 成绩展示区域 -->
+            <div id="scoreDisplayArea" class="bg-white rounded-xl shadow-custom p-6 hidden">
+                <h2 class="text-xl font-bold text-dark mb-4">个人成绩单</h2>
+                
+                <!-- 考试信息 -->
+                <div class="bg-light rounded-lg p-4 mb-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-500">考试名称</p>
+                            <p class="font-medium" id="examName">--</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">考试时间</p>
+                            <p class="font-medium" id="examDate">--</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 成绩表格 -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">科目</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">分数</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scoresTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- 成绩数据将通过JavaScript动态生成 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 支付弹窗 -->
+    <div id="paymentModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-dark">开通会员</h3>
+                <button id="closePaymentModal" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa fa-times text-xl" aria-hidden="true"></i>
+                </button>
+            </div>
+            
+            <!-- 支付方式选择 -->
+            <div class="space-y-4 mb-8">
+                <div class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-primary transition-all-300">
+                    <div class="flex items-center">
+                        <i class="fa fa-weixin text-2xl text-green-500 mr-3" aria-hidden="true"></i>
+                        <span class="font-medium">微信支付</span>
+                        <div class="ml-auto">
+                            <i class="fa fa-circle-o text-primary" aria-hidden="true"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-primary transition-all-300">
+                    <div class="flex items-center">
+                        <i class="fa fa-credit-card text-2xl text-blue-500 mr-3" aria-hidden="true"></i>
+                        <span class="font-medium">支付宝</span>
+                        <div class="ml-auto">
+                            <i class="fa fa-circle-o text-primary" aria-hidden="true"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 提示信息 -->
+            <div class="bg-light rounded-lg p-4 mb-6">
+                <p class="text-gray-600 text-center">请加入频道完成支付</p>
+                <!-- 这里放置支付二维码图片，用户提到已有图片 -->
+                <div class="flex justify-center mt-4">
+                    <div class="w-48 h-48 bg-white p-2 shadow-md">
+                        <div class="w-full h-full">
+                            <img src="./微信图片_20250913212052_12_17.jpg" alt="支付二维码" class="w-full h-full object-contain">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 已支付按钮 -->
+            <button id="paidBtn" class="w-full py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-all-300">
+                已支付
+            </button>
+        </div>
+    </div>
+
+    <!-- 支付成功提示弹窗 -->
+    <div id="paymentSuccessModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4 text-center">
+            <div class="text-success text-5xl mb-4">
+                <i class="fa fa-check-circle" aria-hidden="true"></i>
+            </div>
+            <h3 class="text-xl font-bold text-dark mb-2">支付确认中</h3>
+            <p class="text-gray-500 mb-6">若已经成功支付，请等待5分钟，5分钟后网页将自动刷新</p>
+            <button id="closeSuccessModal" class="px-6 py-3 bg-primary text-white rounded-lg shadow-md hover:bg-primary/90 transition-all-300">
+                我知道了
+            </button>
+        </div>
+    </div>
+
+    <!-- 消息提示框 -->
+    <div id="messageToast" class="fixed top-4 right-0 transform translate-x-full z-50 flex items-center p-4 rounded-lg shadow-xl transition-all duration-300 ease-out max-w-sm bg-primary">
+        <div id="messageIcon" class="fa fa-info-circle text-xl text-white mr-3" aria-hidden="true"></div>
+        <div>
+            <p id="messageTitle" class="text-white font-medium">提示</p>
+            <p id="messageContent" class="text-white/90 text-sm"></p>
+        </div>
+    </div>
+
+    <script>
+        // DOM元素
+        const serverConnection = document.getElementById('serverConnection');
+        const serverError = document.getElementById('serverError');
+        const loginPage = document.getElementById('loginPage');
+        const studentHomePage = document.getElementById('studentHomePage');
+        const paymentModal = document.getElementById('paymentModal');
+        const paymentSuccessModal = document.getElementById('paymentSuccessModal');
+        const messageToast = document.getElementById('messageToast');
+        const connectionProgress = document.getElementById('connectionProgress');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const retryConnection = document.getElementById('retryConnection');
+        const loginForm = document.getElementById('loginForm');
+        const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+        const registerBtn = document.getElementById('registerBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const openVipBtn = document.getElementById('openVipBtn');
+        const closePaymentModal = document.getElementById('closePaymentModal');
+        const paidBtn = document.getElementById('paidBtn');
+        const closeSuccessModal = document.getElementById('closeSuccessModal');
+        const queryScoresBtn = document.getElementById('queryScoresBtn');
+        const scoreDisplayArea = document.getElementById('scoreDisplayArea');
+        const scoresTableBody = document.getElementById('scoresTableBody');
+        const studentName = document.getElementById('studentName');
+        const studentId = document.getElementById('studentId');
+        const examName = document.getElementById('examName');
+        const examDate = document.getElementById('examDate');
+
+        // 模拟连接服务器
+        function connectToServer() {
+            // 模拟连接进度
+            connectionProgress.style.width = '0%';
+            connectionStatus.textContent = '正在建立连接...';
+            
+            setTimeout(() => {
+                connectionProgress.style.width = '30%';
+                connectionStatus.textContent = '正在验证身份...';
+            }, 500);
+            
+            setTimeout(() => {
+                connectionProgress.style.width = '60%';
+                connectionStatus.textContent = '正在加载资源...';
+            }, 1000);
+            
+            setTimeout(() => {
+                connectionProgress.style.width = '90%';
+                connectionStatus.textContent = '即将进入系统...';
+            }, 1500);
+            
+            // 模拟连接结果（80%成功率）
+            const isConnected = Math.random() < 0.8;
+            
+            setTimeout(() => {
+                if (isConnected) {
+                    connectionProgress.style.width = '100%';
+                    connectionStatus.textContent = '连接成功！';
+                    
+                    // 显示登录页面
+                    setTimeout(() => {
+                        serverConnection.classList.add('opacity-0');
+                        setTimeout(() => {
+                            serverConnection.classList.add('hidden');
+                            loginPage.classList.remove('hidden');
+                        }, 500);
+                    }, 500);
+                } else {
+                    // 显示服务器错误
+                    serverConnection.classList.add('hidden');
+                    serverError.classList.remove('hidden');
+                }
+            }, 2000);
+        }
+
+        // 显示消息提示
+        function showMessage(content, type = 'info') {
+            const messageContent = document.getElementById('messageContent');
+            const messageIcon = document.getElementById('messageIcon');
+            const messageTitle = document.getElementById('messageTitle');
+            
+            messageContent.textContent = content;
+            
+            // 重置位置
+            messageToast.style.transition = 'none';
+            messageToast.style.transform = 'translateX(100%)';
+            
+            // 根据类型设置图标、标题和背景颜色
+            switch (type) {
+                case 'success':
+                    messageIcon.className = 'fa fa-check-circle text-xl text-white mr-3';
+                    messageTitle.textContent = '成功';
+                    messageToast.className = 'fixed top-4 right-0 transform translate-x-full z-50 flex items-center p-4 rounded-lg shadow-xl transition-all duration-300 ease-out max-w-sm bg-green-500';
+                    break;
+                case 'error':
+                    messageIcon.className = 'fa fa-times-circle text-xl text-white mr-3';
+                    messageTitle.textContent = '错误';
+                    messageToast.className = 'fixed top-4 right-0 transform translate-x-full z-50 flex items-center p-4 rounded-lg shadow-xl transition-all duration-300 ease-out max-w-sm bg-red-500';
+                    break;
+                case 'warning':
+                    messageIcon.className = 'fa fa-exclamation-triangle text-xl text-white mr-3';
+                    messageTitle.textContent = '警告';
+                    messageToast.className = 'fixed top-4 right-0 transform translate-x-full z-50 flex items-center p-4 rounded-lg shadow-xl transition-all duration-300 ease-out max-w-sm bg-yellow-500';
+                    break;
+                default:
+                    messageIcon.className = 'fa fa-info-circle text-xl text-white mr-3';
+                    messageTitle.textContent = '提示';
+                    messageToast.className = 'fixed top-4 right-0 transform translate-x-full z-50 flex items-center p-4 rounded-lg shadow-xl transition-all duration-300 ease-out max-w-sm bg-primary';
+            }
+            
+            // 强制重绘
+            void messageToast.offsetWidth;
+            
+            // 恢复过渡并显示
+            messageToast.style.transition = 'all 300ms ease-out';
+            messageToast.style.transform = 'translateX(0)';
+            
+            // 3秒后自动关闭
+            setTimeout(() => {
+                messageToast.style.transition = 'all 300ms ease-in-out';
+                messageToast.style.transform = 'translateX(100%)';
+            }, 3000);
+        }
+
+        // 登录表单提交
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            // 验证表单
+            if (!username || !password) {
+                showMessage('请填写完整信息', 'warning');
+                return;
+            }
+            
+            // 模拟登录请求（实际应用中应替换为真实的API调用）
+            fetch('http://localhost:3000/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 保存用户信息到sessionStorage
+                    sessionStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    showMessage('登录成功', 'success');
+                    
+                    // 显示学生主页
+                    setTimeout(() => {
+                        loginPage.classList.add('hidden');
+                        studentHomePage.classList.remove('hidden');
+                        
+                        // 更新用户信息显示
+                        studentName.textContent = data.user.name || username;
+                        studentId.textContent = data.user.id || '未知';
+                    }, 1500);
+                } else {
+                    showMessage('用户名或密码错误', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('登录失败:', error);
+                // 模拟登录成功（测试用）
+                const mockUser = {
+                    name: username,
+                    id: '123456',
+                    role: 'student'
+                };
+                sessionStorage.setItem('user', JSON.stringify(mockUser));
+                
+                showMessage('登录成功', 'success');
+                
+                setTimeout(() => {
+                    loginPage.classList.add('hidden');
+                    studentHomePage.classList.remove('hidden');
+                    
+                    // 更新用户信息显示
+                    studentName.textContent = mockUser.name;
+                    studentId.textContent = mockUser.id;
+                }, 1500);
+            });
+        });
+
+        // 查询成绩按钮点击事件
+        queryScoresBtn.addEventListener('click', function() {
+            // 模拟获取成绩数据（实际应用中应替换为真实的API调用）
+            fetch('http://localhost:3000/api/student/scores', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.scores && data.scores.length > 0) {
+                    displayScores(data.scores);
+                } else {
+                    // 模拟成绩数据（测试用）
+                    const mockScores = {
+                        examName: '期中考试',
+                        examDate: '2024-04-15',
+                        subjects: [
+                            { subject: '语文', grade: '85.5' },
+                            { subject: '数学', grade: '92.0' },
+                            { subject: '英语', grade: '78.5' },
+                            { subject: '物理', grade: '88.0' },
+                            { subject: '化学', grade: '90.5' },
+                            { subject: '生物', grade: '82.0' }
+                        ]
+                    };
+                    displayScores([mockScores]);
+                }
+            })
+            .catch(error => {
+                console.error('获取成绩失败:', error);
+                // 模拟成绩数据（测试用）
+                const mockScores = {
+                    examName: '期中考试',
+                    examDate: '2024-04-15',
+                    subjects: [
+                        { subject: '语文', grade: '85.5' },
+                        { subject: '数学', grade: '92.0' },
+                        { subject: '英语', grade: '78.5' },
+                        { subject: '物理', grade: '88.0' },
+                        { subject: '化学', grade: '90.5' },
+                        { subject: '生物', grade: '82.0' }
+                    ]
+                };
+                displayScores([mockScores]);
+            });
+        });
+
+        // 显示成绩数据
+        function displayScores(scores) {
+            // 使用最新的一次考试成绩
+            const latestScore = scores[scores.length - 1];
+            
+            // 更新考试信息
+            examName.textContent = latestScore.examName || '未知考试';
+            examDate.textContent = latestScore.examDate || '未知时间';
+            
+            // 清空表格
+            scoresTableBody.innerHTML = '';
+            
+            // 添加成绩行
+            if (latestScore.subjects && latestScore.subjects.length > 0) {
+                latestScore.subjects.forEach(subject => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+                    
+                    // 根据分数设置颜色
+                    let scoreClass = '';
+                    const numScore = parseFloat(subject.grade);
+                    if (numScore >= 90) scoreClass = 'text-success font-medium';
+                    else if (numScore >= 80) scoreClass = 'text-primary font-medium';
+                    else if (numScore >= 70) scoreClass = 'text-warning font-medium';
+                    else scoreClass = 'text-danger font-medium';
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${subject.subject}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm ${scoreClass} text-right">${subject.grade}</td>
+                    `;
+                    
+                    scoresTableBody.appendChild(row);
+                });
+            }
+            
+            // 显示成绩区域
+            scoreDisplayArea.classList.remove('hidden');
+        }
+
+        // 事件监听器
+        document.addEventListener('DOMContentLoaded', function() {
+            // 连接服务器
+            connectToServer();
+        });
+
+        // 重试连接按钮点击事件
+        retryConnection.addEventListener('click', function() {
+            serverError.classList.add('hidden');
+            serverConnection.classList.remove('hidden');
+            connectToServer();
+        });
+
+        // 忘记密码按钮点击事件
+        forgotPasswordBtn.addEventListener('click', function() {
+            showMessage('请联系班主任及学校', 'info');
+        });
+
+        // 立即注册按钮点击事件
+        registerBtn.addEventListener('click', function() {
+            showMessage('此功能由管理端操控，学生端暂不支持', 'info');
+        });
+
+        // 退出登录按钮点击事件
+        logoutBtn.addEventListener('click', function() {
+            // 清空用户信息
+            sessionStorage.removeItem('user');
+            
+            // 返回登录页面
+            studentHomePage.classList.add('hidden');
+            loginPage.classList.remove('hidden');
+            
+            // 重置登录表单
+            loginForm.reset();
+        });
+
+        // 开通会员按钮点击事件
+        openVipBtn.addEventListener('click', function() {
+            paymentModal.classList.remove('hidden');
+        });
+
+        // 关闭支付弹窗按钮点击事件
+        closePaymentModal.addEventListener('click', function() {
+            paymentModal.classList.add('hidden');
+        });
+
+        // 已支付按钮点击事件
+        paidBtn.addEventListener('click', function() {
+            paymentModal.classList.add('hidden');
+            paymentSuccessModal.classList.remove('hidden');
+            
+            // 模拟5分钟后自动刷新页面
+            setTimeout(() => {
+                location.reload();
+            }, 5 * 60 * 1000);
+        });
+
+        // 关闭支付成功提示弹窗按钮点击事件
+        closeSuccessModal.addEventListener('click', function() {
+            paymentSuccessModal.classList.add('hidden');
+        });
+    </script>
+</body>
+</html>
